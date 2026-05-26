@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #FFFFFF;
+            color: #374151;
+        }
+        .nav-bg {
+            background-color: #1E3A8A;
+        }
+        .teal-bg {
+            background-color: #14B8A6;
+        }
+        .navy-text {
+            color: #1E3A8A;
+        }
+        .teal-text {
+            color: #14B8A6;
+        }
+        .light-gray-bg {
+            background-color: #F3F4F6;
+        }
+        .white-bg {
+            background-color: #FFFFFF;
+        }
+        .dark-gray-text {
+            color: #374151;
+        }
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        .hidden {
+            display: none;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .table th, .table td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .table th {
+            background-color: #1E3A8A;
+            color: white;
+        }
+        .form-input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .nav-link {
+            color: #14B8A6;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100">
+    <nav class="nav-bg text-white py-4 px-6 flex justify-between items-center">
+        <h1 class="text-2xl font-bold">Expense Tracker</h1>
+        <span id="user-greeting" class="hidden">Hello, <span id="current-user"></span>
+            <button id="logout-btn" class="btn teal-bg text-white ml-4">Logout</button>
+        </span>
+    </nav>
+
+    <!-- Login Page -->
+    <div id="login-page" class="max-w-md mx-auto mt-10 px-4">
+        <div class="light-gray-bg p-6 rounded-lg shadow-md">
+            <h2 class="navy-text text-2xl mb-4 text-center" id="login-title">Login</h2>
+            <form id="auth-form" class="flex flex-col">
+                <div class="form-group">
+                    <input type="text" id="username" placeholder="Username" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" placeholder="Password" class="form-input" required>
+                </div>
+                <button type="submit" class="btn nav-bg text-white">Login</button>
+            </form>
+            <p class="text-center mt-4 dark-gray-text">
+                Don't have an account?&nbsp;
+                <button id="signup-toggle" class="teal-text bg-none border-none cursor-pointer font-bold">Sign Up</button>
+            </p>
+        </div>
+    </div>
+
+    <!-- Tracker Page -->
+    <div id="tracker-page" class="hidden max-w-4xl mx-auto mt-10 px-4">
+        <div class="light-gray-bg p-6 rounded-lg shadow-md">
+            <h2 class="navy-text text-2xl mb-4">Expense Tracker</h2>
+            <form id="entry-form" class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <div>
+                    <select id="entry-type" class="form-input">
+                        <option value="Sales">Sales</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Operations">Operations</option>
+                        <option value="R&D">R&D</option>
+                        <option value="Misc">Misc</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="number" id="entry-amount" placeholder="Amount ($)" class="form-input" min="0" step="0.01" required>
+                </div>
+                <div>
+                    <input type="date" id="entry-date" class="form-input" required>
+                </div>
+                <div class="md:col-span-2">
+                    <input type="text" id="entry-desc" placeholder="Description (optional)" class="form-input">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="btn teal-bg text-white w-full">Add Entry</button>
+                </div>
+            </form>
+            <h3 class="navy-text text-xl mb-2">Entries</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Amount ($)</th>
+                        <th>Date</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody id="entries-table-body">
+                    <tr>
+                        <td colspan="4" class="text-center py-4 dark-gray-text">No entries yet.</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="mt-6">
+                <a href="#" id="view-analytics" class="nav-link">View Analytics →</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Page -->
+    <div id="analytics-page" class="hidden max-w-2xl mx-auto mt-10 px-4">
+        <div class="light-gray-bg p-6 rounded-lg shadow-md">
+            <h2 class="navy-text text-2xl mb-4">Analytics</h2>
+            <canvas id="analytics-chart"></canvas>
+            <div class="mt-6">
+                <a href="#" id="back-to-tracker" class="nav-link">← Back to Tracker</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App State
+        let currentUser = null;
+        let expenses = [];
+        const categories = ['Sales', 'Marketing', 'Operations', 'R&D', 'Misc'];
+
+        // DOM Elements
+        const loginPage = document.getElementById('login-page');
+        const trackerPage = document.getElementById('tracker-page');
+        const analyticsPage = document.getElementById('analytics-page');
+        const userGreeting = document.getElementById('user-greeting');
+        const currentUserSpan = document.getElementById('current-user');
+        const logoutBtn = document.getElementById('logout-btn');
+        const authForm = document.getElementById('auth-form');
+        const loginTitle = document.getElementById('login-title');
+        const signupToggle = document.getElementById('signup-toggle');
+        const entryForm = document.getElementById('entry-form');
+        const entriesTableBody = document.getElementById('entries-table-body');
+        const viewAnalytics = document.getElementById('view-analytics');
+        const backToTracker = document.getElementById('back-to-tracker');
+
+        // Initialize app
+        window.onload = function() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                loginUser(savedUser);
+            }
+        };
+
+        // Auth Functions
+        let isSignup = false;
+
+        signupToggle.addEventListener('click', () => {
+            isSignup = !isSignup;
+            loginTitle.textContent = isSignup ? 'Sign Up' : 'Login';
+            authForm.querySelector('button').textContent = isSignup ? 'Sign Up' : 'Login';
+            signupToggle.previousSibling.textContent = isSignup ? 'Already have an account? ' : 'Don\'t have an account? ';
+            signupToggle.textContent = isSignup ? 'Login' : 'Sign Up';
+        });
+
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            if (!username || !password) {
+                alert('Please enter username and password');
+                return;
+            }
+
+            if (isSignup) {
+                if (localStorage.getItem(`user_${username}`)) {
+                    alert('Username already exists');
+                    return;
+                }
+                localStorage.setItem(`user_${username}`, password);
+                alert('Sign up successful! Please login.');
+                isSignup = false;
+                loginTitle.textContent = 'Login';
+                authForm.querySelector('button').textContent = 'Login';
+                signupToggle.previousSibling.textContent = 'Don\'t have an account? ';
+                signupToggle.textContent = 'Sign Up';
+            } else {
+                const storedPass = localStorage.getItem(`user_${username}`);
+                if (storedPass === password) {
+                    loginUser(username);
+                } else {
+                    alert('Invalid username or password');
+                }
+            }
+        });
+
+        logoutBtn.addEventListener('click', logoutUser);
+
+        function loginUser(username) {
+            currentUser = username;
+            localStorage.setItem('currentUser', username);
+            loadExpenses();
+            userGreeting.classList.remove('hidden');
+            currentUserSpan.textContent = username;
+            loginPage.classList.add('hidden');
+            trackerPage.classList.remove('hidden');
+        }
+
+        function logoutUser() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            expenses = [];
+            userGreeting.classList.add('hidden');
+            trackerPage.classList.add('hidden');
+            analyticsPage.classList.add('hidden');
+            loginPage.classList.remove('hidden');
+        }
+
+        // Tracker Functions
+        function loadExpenses() {
+            const saved = localStorage.getItem(`expenses_${currentUser}`);
+            expenses = saved ? JSON.parse(saved) : [];
+            renderEntries();
+        }
+
+        function saveExpenses() {
+            localStorage.setItem(`expenses_${currentUser}`, JSON.stringify(expenses));
+        }
+
+        entryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const type = document.getElementById('entry-type').value;
+            const amount = parseFloat(document.getElementById('entry-amount').value);
+            const date = document.getElementById('entry-date').value;
+            const desc = document.getElementById('entry-desc').value.trim();
+
+            if (isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid positive amount');
+                return;
+            }
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+
+            const newEntry = {
+                id: Date.now(),
+                type,
+                amount,
+                date,
+                desc
+            };
+
+            expenses.push(newEntry);
+            saveExpenses();
+            renderEntries();
+            entryForm.reset();
+        });
+
+        function renderEntries() {
+            if (expenses.length === 0) {
+                entriesTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4 dark-gray-text">No entries yet.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            entriesTableBody.innerHTML = expenses.map(exp => `
+                <tr>
+                    <td>${exp.type}</td>
+                    <td>$${exp.amount.toFixed(2)}</td>
+                    <td>${exp.date}</td>
+                    <td>${exp.desc || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Navigation
+        viewAnalytics.addEventListener('click', (e) => {
+            e.preventDefault();
+            trackerPage.classList.add('hidden');
+            analyticsPage.classList.remove('hidden');
+            renderAnalytics();
+        });
+
+        backToTracker.addEventListener('click', (e) => {
+            e.preventDefault();
+            analyticsPage.classList.add('hidden');
+            trackerPage.classList.remove('hidden');
+        });
+
+        function renderAnalytics() {
+            const canvas = document.getElementById('analytics-chart');
+            const ctx = canvas.getContext('2d');
+
+            const dataByCategory = categories.map(cat => {
+                return expenses
+                    .filter(exp => exp.type === cat)
+                    .reduce((sum, exp) => sum + exp.amount, 0);
+            });
+
+            if (expenses.length === 0) {
+                canvas.style.display = 'none';
+                analyticsPage.querySelector('.navy-text').insertAdjacentHTML('afterbegin', '<p class="dark-gray-text mb-4">No data to display. Please add some entries first.</p>');
+                return;
+            }
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: 'Total Amount ($)',
+                        data: dataByCategory,
+                        backgroundColor: '#14B8A6',
+                        barThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Expenses by Category',
+                            color: '#1E3A8A',
+                            font: {
+                                size: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#374151' }
+                        },
+                        x: {
+                            ticks: { color: '#374151' }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+</content>
+</create_file>
